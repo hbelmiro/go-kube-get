@@ -11,37 +11,25 @@ import (
 
 func TestNewKubeGet(t *testing.T) {
 	tests := []struct {
-		name              string
-		config            *rest.Config
-		defaultNamespace  string
-		expectError       bool
-		expectedNamespace string
+		name        string
+		config      *rest.Config
+		expectError bool
 	}{
 		{
-			name:              "valid config with namespace",
-			config:            &rest.Config{Host: "https://test-cluster"},
-			defaultNamespace:  "test-namespace",
-			expectError:       false,
-			expectedNamespace: "test-namespace",
+			name:        "valid config",
+			config:      &rest.Config{Host: "https://test-cluster"},
+			expectError: false,
 		},
 		{
-			name:              "valid config with empty namespace defaults to default",
-			config:            &rest.Config{Host: "https://test-cluster"},
-			defaultNamespace:  "",
-			expectError:       false,
-			expectedNamespace: "default",
-		},
-		{
-			name:             "nil config should fail",
-			config:           nil,
-			defaultNamespace: "test",
-			expectError:      true,
+			name:        "nil config should fail",
+			config:      nil,
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			kubeget, err := NewKubeGet(tt.config, tt.defaultNamespace)
+			kubeget, err := NewKubeGet(tt.config)
 
 			if tt.expectError {
 				if err == nil {
@@ -58,10 +46,6 @@ func TestNewKubeGet(t *testing.T) {
 			if kubeget == nil {
 				t.Errorf("Expected kubeget to be non-nil")
 				return
-			}
-
-			if kubeget.defaultNamespace != tt.expectedNamespace {
-				t.Errorf("Expected default namespace %q, got %q", tt.expectedNamespace, kubeget.defaultNamespace)
 			}
 		})
 	}
@@ -171,7 +155,7 @@ func TestGet_ErrorHandling(t *testing.T) {
 		},
 		{
 			name:         "empty resource name with valid kubeget",
-			kubeget:      &KubeGet{defaultNamespace: "default"},
+			kubeget:      &KubeGet{},
 			resourceName: "",
 			namespace:    "default",
 			expectError:  true,
@@ -193,8 +177,6 @@ func TestGet_ErrorHandling(t *testing.T) {
 		})
 	}
 }
-
-// Helper functions for testing
 
 func splitResourceName(resourceName string) []string {
 	if !containsString(resourceName, ".") {

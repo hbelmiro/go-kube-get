@@ -90,7 +90,6 @@ func (k *KubeGet) findGVR(resourceName string) (schema.GroupVersionResource, err
 			version := parts[1]
 			group := strings.Join(parts[2:], ".")
 
-			// Construct the GroupVersionResource directly
 			return schema.GroupVersionResource{
 				Group:    group,
 				Version:  version,
@@ -146,7 +145,6 @@ func (k *KubeGet) findGVR(resourceName string) (schema.GroupVersionResource, err
 		}
 
 		for _, apiResource := range apiResourceList.APIResources {
-			// Check if the resourceName matches the resource name, kind, or any shortnames
 			if apiResource.Name == resourceName ||
 				strings.EqualFold(apiResource.Kind, resourceName) {
 				return gv.WithResource(apiResource.Name), nil
