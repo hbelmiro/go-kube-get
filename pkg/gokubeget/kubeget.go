@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -114,7 +116,7 @@ func (k *KubeGet) findGVR(resourceName string) (schema.GroupVersionResource, err
 	// Try case variations for kind names (e.g., "dspa" -> "DSPA")
 	kindVariations := []string{
 		resourceName,
-		strings.Title(resourceName),
+		cases.Title(language.English).String(resourceName),
 		strings.ToUpper(resourceName),
 		strings.ToUpper(string(resourceName[0])) + strings.ToLower(resourceName[1:]),
 	}
