@@ -1,4 +1,4 @@
-package kubeget
+package gokubeget
 
 import (
 	"context"
@@ -16,17 +16,22 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-// Finder provides a kubectl get-like interface for fetching Kubernetes resources
-type Finder struct {
-	restMapper      meta.RESTMapper
-	dynamicClient   dynamic.Interface
-	discoveryClient discovery.CachedDiscoveryInterface
+// KubeGet provides a kubectl get-like interface for fetching Kubernetes resources
+type KubeGet struct {
+	restMapper       meta.RESTMapper
+	dynamicClient    dynamic.Interface
+	discoveryClient  discovery.CachedDiscoveryInterface
+	defaultNamespace string
 }
 
-// NewFinder creates a new Finder instance using the provided Kubernetes configuration
-func NewFinder(config *rest.Config) (*Finder, error) {
+// NewKubeGet creates a new KubeGet instance using the provided Kubernetes configuration and default namespace
+func NewKubeGet(config *rest.Config, defaultNamespace string) (*KubeGet, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
+	}
+
+	if defaultNamespace == "" {
+		defaultNamespace = "default"
 	}
 
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
@@ -44,25 +49,32 @@ func NewFinder(config *rest.Config) (*Finder, error) {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	return &Finder{
-		restMapper:      restMapper,
-		dynamicClient:   dynamicClient,
-		discoveryClient: cachedClient,
+	return &KubeGet{
+		restMapper:       restMapper,
+		dynamicClient:    dynamicClient,
+		discoveryClient:  cachedClient,
+		defaultNamespace: defaultNamespace,
 	}, nil
 }
 
 // Get retrieves Kubernetes resources by name and namespace, returning the resolved GVR and resource list
-func (f *Finder) Get(ctx context.Context, resourceName, namespace string) (schema.GroupVersionResource, *unstructured.UnstructuredList, error) {
-	gvr, err := f.findGVR(resourceName)
+// If namespace is empty, uses the default namespace from the current kubeconfig context
+func (k *KubeGet) Get(ctx context.Context, resourceName, namespace string) (schema.GroupVersionResource, *unstructured.UnstructuredList, error) {
+	gvr, err := k.findGVR(resourceName)
 	if err != nil {
 		return schema.GroupVersionResource{}, nil, fmt.Errorf("failed to find resource %q: %w", resourceName, err)
 	}
 
+	// Use default namespace if none specified
+	if namespace == "" {
+		namespace = k.defaultNamespace
+	}
+
 	var resourceInterface dynamic.ResourceInterface
 	if namespace != "" {
-		resourceInterface = f.dynamicClient.Resource(gvr).Namespace(namespace)
+		resourceInterface = k.dynamicClient.Resource(gvr).Namespace(namespace)
 	} else {
-		resourceInterface = f.dynamicClient.Resource(gvr)
+		resourceInterface = k.dynamicClient.Resource(gvr)
 	}
 
 	list, err := resourceInterface.List(ctx, metav1.ListOptions{})
@@ -74,7 +86,7 @@ func (f *Finder) Get(ctx context.Context, resourceName, namespace string) (schem
 }
 
 // findGVR resolves a resource name (kind, plural, or shortname) to its GroupVersionResource
-func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, error) {
+func (k *KubeGet) findGVR(resourceName string) (schema.GroupVersionResource, error) {
 	if resourceName == "" {
 		return schema.GroupVersionResource{}, fmt.Errorf("resource name cannot be empty")
 	}
@@ -97,7 +109,7 @@ func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, erro
 	}
 
 	// First try to find it as a resource name (plural form) - this handles most cases
-	gvr, err := f.restMapper.ResourceFor(schema.GroupVersionResource{
+	gvr, err := k.restMapper.ResourceFor(schema.GroupVersionResource{
 		Resource: resourceName,
 	})
 	if err == nil {
@@ -105,7 +117,7 @@ func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, erro
 	}
 
 	// Try to find by kind name (case-insensitive search across all groups)
-	mappings, err := f.restMapper.RESTMappings(schema.GroupKind{Kind: resourceName})
+	mappings, err := k.restMapper.RESTMappings(schema.GroupKind{Kind: resourceName})
 	if err == nil && len(mappings) > 0 {
 		return mappings[0].Resource, nil
 	}
@@ -119,7 +131,7 @@ func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, erro
 	}
 
 	for _, kind := range kindVariations {
-		mappings, err := f.restMapper.RESTMappings(schema.GroupKind{Kind: kind})
+		mappings, err := k.restMapper.RESTMappings(schema.GroupKind{Kind: kind})
 		if err == nil && len(mappings) > 0 {
 			return mappings[0].Resource, nil
 		}
@@ -127,7 +139,7 @@ func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, erro
 
 	// Last resort: try to find by resource shortnames or aliases
 	// This requires checking all available resources
-	apiResourceLists, err := f.discoveryClient.ServerPreferredResources()
+	apiResourceLists, err := k.discoveryClient.ServerPreferredResources()
 	if err != nil {
 		return schema.GroupVersionResource{}, fmt.Errorf("failed to find resource %q: %w", resourceName, err)
 	}

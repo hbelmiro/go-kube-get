@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"go-kube-get/kubeget"
+	"go-kube-get/pkg/gokubeget"
 	"path/filepath"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	resourceName := os.Args[1]
-	namespace := "default"
+	var namespace string
 	if len(os.Args) > 2 {
 		namespace = os.Args[2]
 	}
@@ -36,22 +36,41 @@ func main() {
 		os.Exit(1)
 	}
 
-	finder, err := kubeget.NewFinder(config)
+	// Load the current namespace from kubeconfig
+	clientConfig, err := clientcmd.LoadFromFile(kubeconfig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create finder: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to load kubeconfig file: %v\n", err)
+		os.Exit(1)
+	}
+
+	currentContext := clientConfig.CurrentContext
+	defaultNamespace := "default"
+	if context, exists := clientConfig.Contexts[currentContext]; exists && context.Namespace != "" {
+		defaultNamespace = context.Namespace
+	}
+
+	kubeget, err := gokubeget.NewKubeGet(config, defaultNamespace)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create kubeget client: %v\n", err)
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	gvr, resourceList, err := finder.Get(ctx, resourceName, namespace)
+	gvr, resourceList, err := kubeget.Get(ctx, resourceName, namespace)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get resources: %v\n", err)
 		os.Exit(1)
 	}
 
+	// Show which namespace was actually used
+	actualNamespace := namespace
+	if actualNamespace == "" {
+		actualNamespace = defaultNamespace
+	}
+
 	fmt.Printf("Resource: %s (Group: %s, Version: %s, Resource: %s)\n",
 		resourceName, gvr.Group, gvr.Version, gvr.Resource)
-	fmt.Printf("Namespace: %s\n\n", namespace)
+	fmt.Printf("Namespace: %s\n\n", actualNamespace)
 
 	if len(resourceList.Items) == 0 {
 		fmt.Println("No resources found.")
