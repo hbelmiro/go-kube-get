@@ -25,6 +25,10 @@ type Finder struct {
 
 // NewFinder creates a new Finder instance using the provided Kubernetes configuration
 func NewFinder(config *rest.Config) (*Finder, error) {
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil")
+	}
+
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
@@ -71,6 +75,9 @@ func (f *Finder) Get(ctx context.Context, resourceName, namespace string) (schem
 
 // findGVR resolves a resource name (kind, plural, or shortname) to its GroupVersionResource
 func (f *Finder) findGVR(resourceName string) (schema.GroupVersionResource, error) {
+	if resourceName == "" {
+		return schema.GroupVersionResource{}, fmt.Errorf("resource name cannot be empty")
+	}
 	// Handle fully qualified resource names like "datasciencepipelinesapplications.v1.datasciencepipelinesapplications.opendatahub.io"
 	if strings.Contains(resourceName, ".") {
 		parts := strings.Split(resourceName, ".")
