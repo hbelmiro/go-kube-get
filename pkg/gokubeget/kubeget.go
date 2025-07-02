@@ -18,20 +18,15 @@ import (
 
 // KubeGet provides a kubectl get-like interface for fetching Kubernetes resources
 type KubeGet struct {
-	restMapper       meta.RESTMapper
-	dynamicClient    dynamic.Interface
-	discoveryClient  discovery.CachedDiscoveryInterface
-	defaultNamespace string
+	restMapper      meta.RESTMapper
+	dynamicClient   dynamic.Interface
+	discoveryClient discovery.CachedDiscoveryInterface
 }
 
-// NewKubeGet creates a new KubeGet instance using the provided Kubernetes configuration and default namespace
-func NewKubeGet(config *rest.Config, defaultNamespace string) (*KubeGet, error) {
+// NewKubeGet creates a new KubeGet instance using the provided Kubernetes configuration
+func NewKubeGet(config *rest.Config) (*KubeGet, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
-	}
-
-	if defaultNamespace == "" {
-		defaultNamespace = "default"
 	}
 
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
@@ -50,24 +45,18 @@ func NewKubeGet(config *rest.Config, defaultNamespace string) (*KubeGet, error) 
 	}
 
 	return &KubeGet{
-		restMapper:       restMapper,
-		dynamicClient:    dynamicClient,
-		discoveryClient:  cachedClient,
-		defaultNamespace: defaultNamespace,
+		restMapper:      restMapper,
+		dynamicClient:   dynamicClient,
+		discoveryClient: cachedClient,
 	}, nil
 }
 
 // Get retrieves Kubernetes resources by name and namespace, returning the resolved GVR and resource list
-// If namespace is empty, uses the default namespace from the current kubeconfig context
+// If namespace is empty, retrieves cluster-scoped resources
 func (k *KubeGet) Get(ctx context.Context, resourceName, namespace string) (schema.GroupVersionResource, *unstructured.UnstructuredList, error) {
 	gvr, err := k.findGVR(resourceName)
 	if err != nil {
 		return schema.GroupVersionResource{}, nil, fmt.Errorf("failed to find resource %q: %w", resourceName, err)
-	}
-
-	// Use default namespace if none specified
-	if namespace == "" {
-		namespace = k.defaultNamespace
 	}
 
 	var resourceInterface dynamic.ResourceInterface
