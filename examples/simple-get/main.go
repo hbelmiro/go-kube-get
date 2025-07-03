@@ -7,7 +7,7 @@ import (
 
 	"path/filepath"
 
-	"github.com/yourusername/go-kube-get/pkg/gokubeget"
+	"github.com/hbelmiro/go-kube-get/pkg/gokubeget"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"

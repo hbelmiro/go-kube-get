@@ -1,4 +1,4 @@
-module github.com/yourusername/go-kube-get
+module github.com/hbelmiro/go-kube-get
 
 go 1.24.0
 
