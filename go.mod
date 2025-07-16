@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	golang.org/x/text v0.27.0
-	k8s.io/apimachinery v0.33.2
+	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.2
 )
 
