@@ -3,7 +3,7 @@ module github.com/hbelmiro/go-kube-get
 go 1.25
 
 require (
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 )
