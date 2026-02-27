@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	golang.org/x/text v0.34.0
-	k8s.io/apimachinery v0.35.1
+	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.1
 )
 
