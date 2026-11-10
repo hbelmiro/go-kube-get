@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
+    milestone: 5
     directory: "/"
     schedule:
       interval: "daily"
@@ -15,6 +16,7 @@ updates:
           - "k8s.io/client-go"
 
   - package-ecosystem: "github-actions"
+    milestone: 5
     directory: "/"
     schedule:
       interval: "daily"
